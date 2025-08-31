@@ -1,0 +1,88 @@
+name: Lab 59 - Artifacts Between Jobs
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      short_sha: ${{ steps.meta.outputs.short }}
+      artifact_name: ${{ steps.namegen.outputs.artifact_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Derive short SHA
+        id: meta
+        shell: bash
+        run: |
+          echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Build (placeholder)
+        shell: bash
+        run: |
+          mkdir -p dist
+          echo "Built at $(date -u) on $RUNNER_OS for $GITHUB_REPOSITORY" > dist/info.txt
+
+      - name: Decide artifact name
+        id: namegen
+        shell: bash
+        run: |
+          NAME="app-dist-${{ github.run_number }}-${{ steps.meta.outputs.short }}"
+          echo "artifact_name=${NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact_name || steps.namegen.outputs.artifact_name }}
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 6
+
+  test:
+    name: Test (uses artifact)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: ./artifact
+
+      - name: Inspect artifact contents
+        shell: bash
+        run: |
+          echo "Artifact name: ${{ needs.build.outputs.artifact_name }}"
+          ls -R ./artifact
+
+      - name: Run tests (placeholder)
+        shell: bash
+        run: |
+          # Example: run tests against files in ./artifact/dist
+          test -f ./artifact/dist/info.txt && echo "OK: file present"
+
+  deploy_sim:
+    name: Deploy (simulated)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact (reuse)
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: ./package
+
+      - name: Simulated deploy
+        shell: bash
+        run: |
+          echo "Simulating deploy of ${{ needs.build.outputs.artifact_name }}"
+          echo "Package location:"
+          ls -R ./package
+
+    
