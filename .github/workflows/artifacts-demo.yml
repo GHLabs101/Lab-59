@@ -64,8 +64,7 @@ jobs:
       - name: Run tests (placeholder)
         shell: bash
         run: |
-          # Example: run tests against files in ./artifact/dist
-          test -f ./artifact/dist/info.txt && echo "OK: file present"
+          test -f ./artifact/info.txt && echo "OK: file present"
 
   deploy_sim:
     name: Deploy (simulated)
